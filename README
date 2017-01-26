@@ -1,0 +1,75 @@
+# OdooRPCLocust
+
+An Odoo load testing solution, using OdooRPC and Locust.
+
+Heavily inspired by [OdooLocust](https://github.com/nseinlet/OdooLocust), but with openerplib replaced by OdooRPC.
+
+## Links
+
+* [OdooRPC](https://github.com/oca/odoorpc)
+* [Locust](http://locust.io)
+* [Odoo](https://odoo.com)
+
+# HowTo
+
+To load test Odoo, you create tasks sets like you'll have done it with Locust:
+
+```python
+from locust import task, TaskSet
+
+class SellerTaskSet(TaskSet):
+    @task(10)
+    def read_partners(self):
+        partner_obj = self.client.env['res.partner']
+        partner_ids = partner_obj.search([])
+        partners = partner_obj.read(partner_ids)
+    
+    @task(5)
+    def read_products(self):
+        product_obj = self.client.env['product.product']
+        product_ids = product_obj.search([])
+        products = product_obj.read(product_ids)
+    
+    @task(20)
+    def create_sale_order(self):
+        product_obj = self.client.env['product.product']
+        partner_obj = self.client.env['res.partner']
+        sale_order_obj = self.client.env['sale.order']
+        
+        partner_id = partner_obj.search([('name', 'ilike', 'fletch')])[0]
+        product_ids = product_obj.search([('name', 'ilike', 'ipad')])
+        
+        order_id = sale_order_obj.create({
+            'partner_id': partner_id,
+            'order_line': [(0, 0, {
+                'product_id': product_ids[0],
+                'product_uom_qty': 1,
+            }), (0, 0, {
+                'product_id': prod_ids[1],
+                'product_uom_qty': 2,
+            })],
+        })
+        sale_order = sale_order_obj.browse(sale_order)
+        sale_order.action_button_confirm()
+```
+
+Then you create a profile, based on your taskset, which use OdooRPCLocust instead of Locust:
+
+```python
+from OdooRPCLocust import OdooRPCLocust
+from SellerTaskSet import SellerTaskSet
+
+class Seller(OdooLocust):
+    database = 'demo'
+    min_wait = 100
+    max_wait = 1000
+    weight = 3
+    
+    task_set = SellerTaskSet
+```
+
+And you finally run your locust tests the usual way:
+
+```console
+$ locust -f my_file.py Seller
+```
