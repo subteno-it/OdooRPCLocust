@@ -44,7 +44,7 @@ class ODOO(odoorpc.ODOO):
     def http(self, url, data=None, headers=None):
         start_time = time.time()
         try:
-            res = super(ODOO, self).json(url, data=data, headers=headers)
+            res = super(ODOO, self).http(url, data=data, headers=headers)
         except Exception as e:
             total_time = int((time.time() - start_time) * 1000)
             events.request_failure.fire(
